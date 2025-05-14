@@ -1,5 +1,7 @@
+"""views.py: Chứa các hàm xử lý yêu cầu từ người dùng."""
 import os
 import json
+import traceback
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -7,6 +9,9 @@ import google.generativeai as genai
 
 @csrf_exempt
 def summarize_text(request):
+    """
+    Hàm xử lý yêu cầu tóm tắt văn bản.
+    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Phương thức không được hỗ trợ'}, status=405)
 
@@ -41,9 +46,11 @@ def summarize_text(request):
         return JsonResponse({'summary': response.text})
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
 
 def summarizer_page(request):
+    """
+    Trang tóm tắt văn bản.
+    """
     return render(request, 'summarizer.html')

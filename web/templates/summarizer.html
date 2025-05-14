@@ -19,12 +19,16 @@
 
     <div id="fileInfo"></div>
 
-    <div id="documentContent"><em>Nội dung tài liệu sẽ hiển thị ở đây...</em></div>
+    <!-- <div id="documentContent"><em>Nội dung tài liệu sẽ hiển thị ở đây...</em></div> -->
+    <div id="contentContainer">
+        <div id="documentContent"><em>Nội dung tài liệu sẽ hiển thị ở đây...</em></div>
+        <div id="summaryArea"><em>Bản tóm tắt sẽ hiển thị ở đây...</em></div>
+    </div>
 
     <button id="summarizeBtn" disabled>Tạo bản tóm tắt</button>
     <span id="spinner">⏳ Đang xử lý...</span>
 
-    <div id="summaryArea"><em>Bản tóm tắt sẽ hiển thị ở đây...</em></div>
+    <!-- <div id="summaryArea"><em>Bản tóm tắt sẽ hiển thị ở đây...</em></div> -->
 
     <script src="{% static 'src/js/main.js' %}"></script>
 </body>
