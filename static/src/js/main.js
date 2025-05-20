@@ -154,3 +154,47 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+document.getElementById("summarizeBtn").addEventListener("click", function () {
+    const content = document.getElementById("documentContent").innerText.trim();
+
+    if (!content) {
+        alert("Không có nội dung để tóm tắt.");
+        return;
+    }
+
+    document.getElementById("spinner").style.display = "inline";
+
+    fetch("/api/summarize/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+        },
+        body: JSON.stringify({ content: content }),
+    })
+        .then((res) => res.json())
+        .then((data) => {
+            document.getElementById("spinner").style.display = "none";
+
+            if (data.summary) {
+                document.getElementById("summaryArea").innerText = data.summary;
+
+                // Đồng bộ input ẩn để chuẩn bị xuất
+                document.getElementById("summaryPdfInput").value = data.summary;
+                document.getElementById("summaryDocxInput").value = data.summary;
+
+                // Bật nút xuất
+                document.getElementById("exportPdfBtn").disabled = false;
+                document.getElementById("exportDocxBtn").disabled = false;
+            } else {
+                alert("Không thể tóm tắt văn bản.");
+            }
+        })
+        .catch((err) => {
+            document.getElementById("spinner").style.display = "none";
+            alert("Lỗi khi gửi yêu cầu tóm tắt.");
+            console.error(err);
+        });
+});
+

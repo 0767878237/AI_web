@@ -25,9 +25,24 @@
         <div id="summaryArea"><em>Bản tóm tắt sẽ hiển thị ở đây...</em></div>
     </div>
 
-    <div id="actionButtons">
+   <div id="actionButtons" style="display: flex; gap: 10px;">
         <button id="summarizeBtn" disabled>Tạo bản tóm tắt</button>
+
+        <form method="POST" action="{% url 'export_summary' %}" id="exportPdfForm">
+            {% csrf_token %}
+            <input type="hidden" name="format" value="pdf">
+            <input type="hidden" name="summary" id="summaryPdfInput">
+            <button type="submit" id="exportPdfBtn" disabled>📄 Xuất PDF</button>
+        </form>
+
+        <form method="POST" action="{% url 'export_summary' %}" id="exportDocxForm">
+            {% csrf_token %}
+            <input type="hidden" name="format" value="docx">
+            <input type="hidden" name="summary" id="summaryDocxInput">
+            <button type="submit" id="exportDocxBtn" disabled>📝 Xuất DOCX</button>
+        </form>
     </div>
+
     <span id="spinner">⏳ Đang xử lý...</span>
 
     <!-- <div id="summaryArea"><em>Bản tóm tắt sẽ hiển thị ở đây...</em></div> -->

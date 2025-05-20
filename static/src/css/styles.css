@@ -64,7 +64,9 @@ h1 {
 #actionButtons {
     text-align: center;
     margin: 50px 0;
+    padding: 20px;
     display: flex;
+    gap: 10px;
     justify-content: center;
 }
 
@@ -87,4 +89,21 @@ h1 {
 #spinner {
     display: none;
     font-weight: bold;
+}
+
+#exportPdfBtn,
+#exportDocxBtn {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #2ecc71; /* Màu sắc khác để phân biệt */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#exportPdfBtn:disabled,
+#exportDocxBtn:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
 }
