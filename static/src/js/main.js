@@ -1,4 +1,3 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 let currentFileContent = '';
 let fileName = '';
 let fileType = '';
@@ -10,40 +9,114 @@ const documentContent = document.getElementById('documentContent');
 const summarizeBtn = document.getElementById('summarizeBtn');
 const summaryArea = document.getElementById('summaryArea');
 const spinner = document.getElementById('spinner');
+const exportDocxBtn = document.getElementById('exportDocxBtn');
 
-uploadArea.addEventListener('click', () => fileInput.click());
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
-});
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.style.backgroundColor = 'rgba(52, 152, 219, 0.1)';
-});
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.style.backgroundColor = 'rgba(52, 152, 219, 0.1)';
-    if (e.dataTransfer.files.length) {
-        handleFile(e.dataTransfer.files[0]);
+// Set PDF.js worker source
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Enhanced upload area click handler
+    uploadArea.addEventListener("click", function () {
+        fileInput.click();
+    });
+
+    // Enhanced drag and drop with modern UI feedback
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // File input change handler
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length) {
+            handleFile(fileInput.files[0]);
+        }
+    });
+
+    // Enhanced summarize button with loading state
+    summarizeBtn.addEventListener('click', function() {
+        // Update button to loading state
+        this.innerHTML = `
+            <div class="loading-spinner"></div>
+            Đang tạo tóm tắt...
+        `;
+        this.disabled = true;
+        generateSummary();
+    });
+
+    // Enhanced export functionality
+    const exportForm = document.getElementById('exportDocxForm');
+    if (exportForm) {
+        exportForm.addEventListener('submit', function(e) {
+            // Add loading state to export button
+            exportDocxBtn.innerHTML = `
+                <div class="loading-spinner"></div>
+                Đang xuất...
+            `;
+            exportDocxBtn.disabled = true;
+            
+            // Reset button after a delay (form will redirect)
+            setTimeout(() => {
+                exportDocxBtn.innerHTML = `
+                    <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7,10 12,15 17,10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    📝 Xuất DOCX
+                `;
+                exportDocxBtn.disabled = false;
+            }, 3000);
+        });
     }
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + U to trigger file upload
+        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+            e.preventDefault();
+            fileInput.click();
+        }
+        
+        // Ctrl/Cmd + Enter to generate summary
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            if (!summarizeBtn.disabled && currentFileContent) {
+                summarizeBtn.click();
+            }
+        }
+    });
 });
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length) {
-        handleFile(fileInput.files[0]);
-    }
-});
-summarizeBtn.addEventListener('click', generateSummary);
 
 async function handleFile(file) {
     fileName = file.name;
     fileType = fileName.split('.').pop().toLowerCase();
 
-    fileInfo.innerHTML = `
-        <strong>Tệp:</strong> ${fileName}<br>
-        <strong>Kích thước:</strong> ${formatFileSize(file.size)}<br>
-        <strong>Loại:</strong> ${fileType.toUpperCase()}
-    `;
+    // Show file info with modern UI
+    showFileInfo(file);
 
-    documentContent.innerHTML = '<p>Đang đọc tài liệu...</p>';
+    // Show loading state in document content
+    documentContent.innerHTML = `
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            Đang đọc tài liệu...
+        </div>
+    `;
 
     try {
         if (fileType === 'pdf') {
@@ -51,14 +124,56 @@ async function handleFile(file) {
         } else if (fileType === 'doc' || fileType === 'docx') {
             await handleDocFile(file);
         } else {
-            documentContent.innerHTML = '<p class="error">Loại tệp không được hỗ trợ. Vui lòng dùng PDF, DOC hoặc DOCX.</p>';
+            documentContent.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <p><strong>❌ Loại tệp không được hỗ trợ</strong></p>
+                    <p>Vui lòng sử dụng tệp PDF, DOC hoặc DOCX.</p>
+                </div>
+            `;
             return;
         }
 
+        // Enable summarize button and reset its state
         summarizeBtn.disabled = false;
+        resetSummarizeButton();
+        
     } catch (error) {
         console.error('Lỗi khi đọc tệp:', error);
-        documentContent.innerHTML = `<p class="error">Lỗi khi đọc tệp: ${error.message}</p>`;
+        documentContent.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #ef4444;">
+                <p><strong>❌ Lỗi khi đọc tệp</strong></p>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function showFileInfo(file) {
+    const fileNameElement = document.getElementById('fileName');
+    const fileSizeElement = document.getElementById('fileSize');
+    
+    if (fileNameElement && fileSizeElement) {
+        fileNameElement.textContent = file.name;
+        fileSizeElement.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+    } else {
+        // Fallback for original structure
+        fileInfo.innerHTML = `
+            <div class="file-info-content">
+                <svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10,9 9,9 8,9"/>
+                </svg>
+                <div class="file-details">
+                    <h4>${file.name}</h4>
+                    <p>${formatFileSize(file.size)}</p>
+                </div>
+            </div>
+        `;
+        fileInfo.style.display = 'block';
     }
 }
 
@@ -81,7 +196,12 @@ async function handlePdfFile(file) {
         content += `\n[...Tài liệu có ${numPages} trang, chỉ hiển thị 20 trang đầu tiên...]\n`;
     }
 
-    documentContent.innerHTML = `<p>${content.replace(/\n/g, '<br>')}</p>`;
+    // Display content with better formatting
+    documentContent.innerHTML = `
+        <div class="content-text">
+            ${content.replace(/\n/g, '<br>')}
+        </div>
+    `;
     currentFileContent = content;
 }
 
@@ -90,14 +210,24 @@ async function handleDocFile(file) {
     const result = await mammoth.extractRawText({ arrayBuffer });
     const content = result.value;
 
-    documentContent.innerHTML = `<p>${content.replace(/\n/g, '<br>')}</p>`;
+    // Display content with better formatting
+    documentContent.innerHTML = `
+        <div class="content-text">
+            ${content.replace(/\n/g, '<br>')}
+        </div>
+    `;
     currentFileContent = content;
 }
 
 async function generateSummary() {
-    spinner.style.display = 'inline';
-    summaryArea.innerHTML = '<p>Đang tạo bản tóm tắt...</p>';
-    summarizeBtn.disabled = true;
+    // Show spinner and update summary area
+    spinner.style.display = 'block';
+    summaryArea.innerHTML = `
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            Đang tạo bản tóm tắt...
+        </div>
+    `;
 
     try {
         if (!currentFileContent || currentFileContent.trim() === '') {
@@ -121,17 +251,51 @@ async function generateSummary() {
         const data = await response.json();
 
         if (response.ok && data.summary) {
-            summaryArea.innerHTML = `<p>${data.summary.replace(/\n/g, '<br>')}</p>`;
+            // Display summary with better formatting
+            summaryArea.innerHTML = `
+                <div class="content-text">
+                    ${data.summary.replace(/\n/g, '<br>')}
+                </div>
+            `;
+
+            // Enable export button and sync hidden input
+            const summaryDocxInput = document.getElementById('summaryDocxInput');
+            if (summaryDocxInput) {
+                summaryDocxInput.value = data.summary;
+            }
+            exportDocxBtn.disabled = false;
+
+            // Show success message
+            showSuccessMessage('Tóm tắt đã được tạo thành công!');
+
         } else {
             throw new Error(data.error || 'Đã xảy ra lỗi không xác định.');
         }
     } catch (error) {
         console.error('Lỗi khi tạo bản tóm tắt:', error);
-        summaryArea.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`;
+        summaryArea.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #ef4444;">
+                <p><strong>❌ Lỗi khi tạo bản tóm tắt</strong></p>
+                <p>${error.message}</p>
+            </div>
+        `;
     } finally {
+        // Hide spinner and reset button
         spinner.style.display = 'none';
-        summarizeBtn.disabled = false;
+        resetSummarizeButton();
     }
+}
+
+function resetSummarizeButton() {
+    summarizeBtn.innerHTML = `
+        <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4"/>
+            <polyline points="9,11 12,14 15,11"/>
+            <line x1="12" y1="14" x2="12" y2="2"/>
+        </svg>
+        Tạo bản tóm tắt
+    `;
+    summarizeBtn.disabled = false;
 }
 
 function formatFileSize(bytes) {
@@ -155,46 +319,31 @@ function getCookie(name) {
     return cookieValue;
 }
 
-document.getElementById("summarizeBtn").addEventListener("click", function () {
-    const content = document.getElementById("documentContent").innerText.trim();
-
-    if (!content) {
-        alert("Không có nội dung để tóm tắt.");
-        return;
-    }
-
-    document.getElementById("spinner").style.display = "inline";
-
-    fetch("/api/summarize/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken"),
-        },
-        body: JSON.stringify({ content: content }),
-    })
-        .then((res) => res.json())
-        .then((data) => {
-            document.getElementById("spinner").style.display = "none";
-
-            if (data.summary) {
-                document.getElementById("summaryArea").innerText = data.summary;
-
-                // Đồng bộ input ẩn để chuẩn bị xuất
-                document.getElementById("summaryPdfInput").value = data.summary;
-                document.getElementById("summaryDocxInput").value = data.summary;
-
-                // Bật nút xuất
-                document.getElementById("exportPdfBtn").disabled = false;
-                document.getElementById("exportDocxBtn").disabled = false;
-            } else {
-                alert("Không thể tóm tắt văn bản.");
+// Add visual feedback for successful operations
+function showSuccessMessage(message) {
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    successDiv.textContent = message;
+    
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (document.body.contains(successDiv)) {
+                document.body.removeChild(successDiv);
             }
-        })
-        .catch((err) => {
-            document.getElementById("spinner").style.display = "none";
-            alert("Lỗi khi gửi yêu cầu tóm tắt.");
-            console.error(err);
-        });
-});
-
+        }, 300);
+    }, 3000);
+}

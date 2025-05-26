@@ -8,7 +8,9 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 import google.generativeai as genai
 from docx import Document
-from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
 def summarizer_page(request):
     """
     Trang tóm tắt văn bản.
@@ -31,7 +33,7 @@ def summarize_text(request):
             return JsonResponse({'error': 'Không có nội dung để tóm tắt'}, status=400)
 
         prompt = f"""Nhiệm vụ: Tóm tắt văn bản sau một cách ngắn gọn, chỉ giữ lại các ý chính.
-        Yêu cầu: Tạo một bản tóm tắt không quá 1000 từ, bám sát nội dung gốc.
+        Yêu cầu: Tạo một bản tóm tắt không quá 5000 từ, bám sát nội dung gốc.
         Văn bản cần tóm tắt:
 
         {content}
@@ -62,24 +64,36 @@ def export_summary(request):
         summary_text = request.POST.get("summary", "")
         export_format = request.POST.get("format", "")
 
-        if export_format == "pdf":
-            buffer = BytesIO()
-            p = canvas.Canvas(buffer)
-            y = 800
-            for line in summary_text.split("\n"):
-                p.drawString(50, y, line)
-                y -= 20
-            p.showPage()
-            p.save()
-            buffer.seek(0)
-            return HttpResponse(buffer, content_type='application/pdf', headers={'Content-Disposition': 'attachment; filename="tom_tat.pdf"'})
-        elif export_format == "docx":
+        # if export_format == "pdf":
+        #     buffer = BytesIO()
+        #     doc = SimpleDocTemplate(buffer, pagesize=A4)
+        #     styles = getSampleStyleSheet()
+        #     story = []
+
+        #     for line in summary_text.split("\n"):
+        #         story.append(Paragraph(line, styles["Normal"]))
+        #         story.append(Spacer(1, 12))
+
+        #     doc.build(story)
+        #     buffer.seek(0)
+        #     return HttpResponse(
+        #         buffer,
+        #         content_type='application/pdf',
+        #         headers={'Content-Disposition': 'attachment; filename="tom_tat.pdf"'}
+        #     )
+
+        if export_format == "docx":
+            from docx import Document
             buffer = BytesIO()
             doc = Document()
             for line in summary_text.split("\n"):
                 doc.add_paragraph(line)
             doc.save(buffer)
             buffer.seek(0)
-            return HttpResponse(buffer, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                headers={'Content-Disposition': 'attachment; filename="tom_tat.docx"'})
+            return HttpResponse(
+                buffer,
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                headers={'Content-Disposition': 'attachment; filename="tom_tat.docx"'}
+            )
+
     return HttpResponse("Yêu cầu không hợp lệ", status=400)
