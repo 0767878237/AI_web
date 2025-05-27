@@ -561,6 +561,15 @@ body {
     .content {
         font-size: 1rem;
     }
+
+    .benefits-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .benefit-card {
+        padding: 24px 20px;
+    }
 }
 
 /* Custom Scrollbar cho phần cuộn */
@@ -720,6 +729,7 @@ body {
     }
 }
 
+/* Quy trình hoạt động */
 .container-logic {
     text-align: center;
     max-width: 900px;
@@ -764,4 +774,96 @@ h1 {
 
 .content p:last-child {
     margin-bottom: 0;
+}
+
+.benefits-section {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.main-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 48px;
+    line-height: 1.2;
+}
+
+.benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+}
+
+.benefit-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: left;
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.benefit-card:hover {
+    border-color: #8b5cf6;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);
+}
+
+.benefit-card:nth-child(1) {
+    border-color: #10b981;
+}
+
+.benefit-card:nth-child(2) {
+    border-color: #f59e0b;
+}
+
+.benefit-card:nth-child(3) {
+    border-color: #8b5cf6;
+}
+
+.benefit-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+.benefit-card:nth-child(1) .benefit-icon {
+    background-color: #d1fae5;
+    color: #10b981;
+}
+
+.benefit-card:nth-child(2) .benefit-icon {
+    background-color: #fef3c7;
+    color: #f59e0b;
+}
+
+.benefit-card:nth-child(3) .benefit-icon {
+    background-color: #ede9fe;
+    color: #8b5cf6;
+}
+
+.benefit-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.benefit-description {
+    color: #6b7280;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    flex-grow: 1;
 }
