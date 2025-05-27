@@ -9,6 +9,58 @@
     <link rel="stylesheet" href="{% static 'src/css/styles.css' %}">
 </head>
 <body>
+    <header class="taskbar">
+        <div class="taskbar-container">
+            <!-- Logo -->
+            <div class="logo-container">
+                <a href="{% url 'summarizer_page' %}" class="logo-link">
+                    <img src="{% static 'src/imgs/logo.jpg' %}" alt="GKTP Logo" class="logo">
+                </a>
+            </div>
+
+            <!-- Desktop Navigation -->
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#tutorial" class="nav-link">Hướng dẫn</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/loi-ich" class="nav-link">Lợi ích</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/doi-tuong-su-dung" class="nav-link">Đối tượng sử dụng</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/ve-chung-toi" class="nav-link">Về chúng tôi</a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                ☰
+            </button>
+        </div>
+
+        <!-- Mobile Navigation -->
+        <div class="mobile-menu" id="mobileMenu">
+            <ul class="mobile-nav-menu">
+                <li class="mobile-nav-item">
+                    <a href="/huong-dan" class="mobile-nav-link">Hướng dẫn</a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="/loi-ich" class="mobile-nav-link">Lợi ích</a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="/doi-tuong-su-dung" class="mobile-nav-link">Đối tượng sử dụng</a>
+                </li>
+                <li class="mobile-nav-item">
+                    <a href="/ve-chung-toi" class="mobile-nav-link">Về chúng tôi</a>
+                </li>
+            </ul>
+        </div>
+    </header>
+
     <!-- Hero Section -->
     <div class="hero-section">
         <div class="hero-container">
@@ -132,7 +184,7 @@
     </div>
 
     <!-- Turtorial -->
-    <div class="container">
+    <div class="container" id="tutorial">
         <!-- Header Section -->
         <div class="header">
             <div class="ai-badge">HƯỚNG DẪN</div>

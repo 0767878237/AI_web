@@ -16,6 +16,28 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 }
 
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('mobileMenu');
+    mobileMenu.classList.toggle('active');
+}
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', function(event) {
+    const mobileMenu = document.getElementById('mobileMenu');
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    
+    if (!mobileMenu.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
+        mobileMenu.classList.remove('active');
+    }
+});
+
+// Close mobile menu when window is resized to desktop
+window.addEventListener('resize', function() {
+    if (window.innerWidth > 768) {
+        document.getElementById('mobileMenu').classList.remove('active');
+    }
+});
+
 document.addEventListener("DOMContentLoaded", function () {
     // Enhanced upload area click handler
     uploadArea.addEventListener("click", function () {
