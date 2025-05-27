@@ -37,6 +37,14 @@ body {
     margin-left: -8px;
 }
 
+.avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
 .avatar {
     width: 48px;
     height: 48px;
@@ -51,11 +59,6 @@ body {
     font-size: 16px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
-
-.avatar:nth-child(1) { background: linear-gradient(135deg, #4f9cf9 0%, #1e40af 100%); }
-.avatar:nth-child(2) { background: linear-gradient(135deg, #34d399 0%, #059669 100%); }
-.avatar:nth-child(3) { background: linear-gradient(135deg, #f472b6 0%, #be185d 100%); }
-.avatar:nth-child(4) { background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%); }
 
 .rating-info {
     display: flex;
