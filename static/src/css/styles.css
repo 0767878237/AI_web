@@ -570,6 +570,15 @@ body {
     .benefit-card {
         padding: 24px 20px;
     }
+    .user-types-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .user-card {
+        padding: 24px 20px;
+        min-height: auto;
+    }
 }
 
 /* Custom Scrollbar cho phần cuộn */
@@ -701,34 +710,6 @@ body {
     color: #1a1a1a;
 }
 
-@media (max-width: 768px) {
-    .container {
-        padding: 32px 16px;
-    }
-
-    .main-title {
-        font-size: 2rem;
-    }
-
-    .subtitle {
-        font-size: 1rem;
-    }
-
-    .step {
-        gap: 16px;
-    }
-
-    .step-number {
-        width: 40px;
-        height: 40px;
-        font-size: 1rem;
-    }
-
-    .step-title {
-        font-size: 1.125rem;
-    }
-}
-
 /* Quy trình hoạt động */
 .container-logic {
     text-align: center;
@@ -736,20 +717,6 @@ body {
     margin: 0 auto;
     padding: 60px 40px;
     border-radius: 12px;
-}
-
-.badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #e8d5ff, #f0e6ff);
-    color: #7c3aed;
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 30px;
-    border: 1px solid #e8d5ff;
 }
 
 h1 {
@@ -774,20 +741,6 @@ h1 {
 
 .content p:last-child {
     margin-bottom: 0;
-}
-
-.benefits-section {
-    max-width: 1200px;
-    margin: 0 auto;
-    text-align: center;
-}
-
-.main-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 48px;
-    line-height: 1.2;
 }
 
 .benefits-grid {
@@ -866,4 +819,108 @@ h1 {
     line-height: 1.6;
     font-size: 0.95rem;
     flex-grow: 1;
+}
+
+.benefits-section {
+    max-width: 1400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.user-types-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-top: 40px;
+}
+
+.user-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 32px 24px;
+    text-align: left;
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+}
+
+.user-card:hover {
+    border-color: #8b5cf6;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(139, 92, 246, 0.1);
+}
+
+.user-card:nth-child(1) {
+    border-color: #3b82f6;
+}
+
+.user-card:nth-child(2) {
+    border-color: #10b981;
+}
+
+.user-card:nth-child(3) {
+    border-color: #f59e0b;
+}
+
+.user-card:nth-child(4) {
+    border-color: #ef4444;
+}
+
+.user-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+}
+
+.user-card:nth-child(1) .user-icon {
+    background-color: #dbeafe;
+    color: #3b82f6;
+}
+
+.user-card:nth-child(2) .user-icon {
+    background-color: #d1fae5;
+    color: #10b981;
+}
+
+.user-card:nth-child(3) .user-icon {
+    background-color: #fef3c7;
+    color: #f59e0b;
+}
+
+.user-card:nth-child(4) .user-icon {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.user-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.user-description {
+    color: #6b7280;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    flex-grow: 1;
+    margin-bottom: 16px;
+}
+
+.user-benefit {
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 0.9rem;
+    font-style: italic;
+    padding-top: 16px;
+    border-top: 1px solid #f3f4f6;
 }
