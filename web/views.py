@@ -11,6 +11,7 @@ from docx import Document
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
+from PyPDF2 import PdfReader
 def summarizer_page(request):
     """
     Trang tóm tắt văn bản.
@@ -58,8 +59,11 @@ def summarize_text(request):
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
-    
+
 def export_summary(request):
+    """
+    Hàm xử lý yêu cầu xuất bản tóm tắt.
+    """
     if request.method == "POST":
         summary_text = request.POST.get("summary", "")
         export_format = request.POST.get("format", "")
@@ -83,7 +87,6 @@ def export_summary(request):
         #     )
 
         if export_format == "docx":
-            from docx import Document
             buffer = BytesIO()
             doc = Document()
             for line in summary_text.split("\n"):
@@ -97,3 +100,42 @@ def export_summary(request):
             )
 
     return HttpResponse("Yêu cầu không hợp lệ", status=400)
+
+@csrf_exempt
+def extract_text_from_file(request):
+    """
+    Nhận file PDF hoặc DOCX, trích xuất văn bản.
+    """
+    if request.method != "POST":
+        return JsonResponse({'error': 'Phương thức không được hỗ trợ'}, status=405)
+
+    try:
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return JsonResponse({'error': 'Không có file nào được tải lên'}, status=400)
+
+        filename = uploaded_file.name.lower()
+
+        content = ""
+
+        if filename.endswith('.pdf'):
+            reader = PdfReader(uploaded_file)
+            max_pages = min(len(reader.pages), 20)
+            for i in range(max_pages):
+                content += reader.pages[i].extract_text() + "\n\n"
+            if len(reader.pages) > 20:
+                content += f"[...Tài liệu có {len(reader.pages)} trang, chỉ hiển thị 20 trang đầu tiên...]\n"
+
+        elif filename.endswith('.docx'):
+            doc = Document(uploaded_file)
+            for para in doc.paragraphs:
+                content += para.text + "\n"
+
+        else:
+            return JsonResponse({'error': 'Chỉ hỗ trợ các file PDF hoặc DOCX'}, status=400)
+
+        return JsonResponse({'content': content})
+
+    except Exception as e:
+        traceback.print_exc()
+        return JsonResponse({'error': str(e)}, status=500)

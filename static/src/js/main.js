@@ -107,10 +107,8 @@ async function handleFile(file) {
     fileName = file.name;
     fileType = fileName.split('.').pop().toLowerCase();
 
-    // Show file info with modern UI
     showFileInfo(file);
 
-    // Show loading state in document content
     documentContent.innerHTML = `
         <div class="loading">
             <div class="loading-spinner"></div>
@@ -119,24 +117,29 @@ async function handleFile(file) {
     `;
 
     try {
-        if (fileType === 'pdf') {
-            await handlePdfFile(file);
-        } else if (fileType === 'doc' || fileType === 'docx') {
-            await handleDocFile(file);
-        } else {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/extract-text/', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.content) {
             documentContent.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #ef4444;">
-                    <p><strong>❌ Loại tệp không được hỗ trợ</strong></p>
-                    <p>Vui lòng sử dụng tệp PDF, DOC hoặc DOCX.</p>
+                <div class="content-text">
+                    ${data.content.replace(/\n/g, '<br>')}
                 </div>
             `;
-            return;
+            currentFileContent = data.content;
+            summarizeBtn.disabled = false;
+            resetSummarizeButton();
+        } else {
+            throw new Error(data.error || 'Đã xảy ra lỗi khi đọc nội dung file');
         }
 
-        // Enable summarize button and reset its state
-        summarizeBtn.disabled = false;
-        resetSummarizeButton();
-        
     } catch (error) {
         console.error('Lỗi khi đọc tệp:', error);
         documentContent.innerHTML = `
