@@ -34,8 +34,11 @@ def summarize_text(request):
         if not content:
             return JsonResponse({'error': 'Không có nội dung để tóm tắt'}, status=400)
 
-        prompt = f"""Nhiệm vụ: Tóm tắt văn bản sau theo ngôn ngữ gốc một cách ngắn gọn, chỉ giữ lại các ý chính.
-        Yêu cầu: Tạo một bản tóm tắt không quá 5000 từ, bám sát nội dung gốc.
+        prompt = f"""Bạn là một trợ lý AI thông minh. Hãy tóm tắt văn bản sau bằng chính ngôn ngữ mà văn bản đang sử dụng (tiếng Việt, tiếng Anh, v.v.).
+            Yêu cầu:
+            - Giữ nguyên ngôn ngữ gốc của văn bản.
+            - Tóm tắt ngắn gọn, súc tích, chỉ bao gồm các ý chính.
+            - Không vượt quá 5000 từ.
         Văn bản cần tóm tắt:
 
         {content}
