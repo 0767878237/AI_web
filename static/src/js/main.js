@@ -126,6 +126,12 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 async function handleFile(file) {
+    summaryArea.innerHTML = '';
+    exportDocxBtn.disabled = true;
+    const summaryDocxInput = document.getElementById('summaryDocxInput');
+    if (summaryDocxInput) {
+        summaryDocxInput.value = '';
+    }
     fileName = file.name;
     fileType = fileName.split('.').pop().toLowerCase();
 
