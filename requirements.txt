@@ -68,6 +68,8 @@ pandas==2.2.3
 parsel==1.10.0
 passlib==1.7.4
 pathspec==0.12.1
+pdfminer.six==20250327
+pdfplumber==0.11.6
 pillow==10.2.0
 platformdirs==4.3.7
 pluggy==1.5.0
@@ -88,6 +90,7 @@ pylint==3.3.7
 pyOpenSSL==24.1.0
 pyparsing==3.2.3
 PyPDF2==2.12.1
+pypdfium2==4.30.1
 pypiwin32==223
 pypng==0.20220715.0
 pyserial==3.5
