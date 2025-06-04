@@ -13,6 +13,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from PyPDF2 import PdfReader
 import pdfplumber
+from langdetect import detect, DetectorFactory
+DetectorFactory.seed = 0 
 def summarizer_page(request):
     """
     Trang tóm tắt văn bản.
@@ -30,19 +32,37 @@ def summarize_text(request):
     try:
         body = json.loads(request.body)
         content = body.get('content', '').strip()
+        detected_language = body.get('detected_language')
 
         if not content:
             return JsonResponse({'error': 'Không có nội dung để tóm tắt'}, status=400)
+        
+        if not detected_language:
+            try:
+                detected_language = detect(content)
+            except:
+                detected_language = 'unknown'
 
-        prompt = f"""Bạn là một trợ lý AI thông minh. Hãy tóm tắt văn bản sau bằng chính ngôn ngữ mà văn bản đang sử dụng (tiếng Việt, tiếng Anh, v.v.).
+        language_map = {
+                'vi': 'tiếng Việt',
+                'en': 'English',
+                'fr': 'French',
+                'de': 'German',
+                'ja': 'Japanese',
+                'zh-cn': 'Chinese',
+                'unknown': 'ngôn ngữ gốc'
+            }
+        language_name = language_map.get(detected_language, 'ngôn ngữ gốc')
+
+        prompt = f"""Bạn là một trợ lý AI thông minh. Hãy tóm tắt văn bản sau bằng đúng ngôn ngữ gốc của nó, hiện đang được phát hiện là **{language_name}**.
             Yêu cầu:
-            - Giữ nguyên ngôn ngữ gốc của văn bản.
-            - Tóm tắt ngắn gọn, súc tích, chỉ bao gồm các ý chính.
+            - Tóm tắt phải sử dụng đúng ngôn ngữ của văn bản gốc: {language_name}.
+            - Chỉ nêu các ý chính, loại bỏ chi tiết rườm rà.
             - Không vượt quá 5000 từ.
-        Văn bản cần tóm tắt:
 
-        {content}
-        """
+            Văn bản cần tóm tắt:
+            {content}
+            """
 
         # Lấy API key từ biến môi trường
         api_key = os.getenv("GEMINI_API_KEY")
@@ -53,7 +73,6 @@ def summarize_text(request):
 
         genai.configure(api_key=api_key)
 
-        # Directly use the recommended model
         model = genai.GenerativeModel('gemini-1.5-flash')
 
         response = model.generate_content(prompt)
@@ -71,24 +90,6 @@ def export_summary(request):
     if request.method == "POST":
         summary_text = request.POST.get("summary", "")
         export_format = request.POST.get("format", "")
-
-        # if export_format == "pdf":
-        #     buffer = BytesIO()
-        #     doc = SimpleDocTemplate(buffer, pagesize=A4)
-        #     styles = getSampleStyleSheet()
-        #     story = []
-
-        #     for line in summary_text.split("\n"):
-        #         story.append(Paragraph(line, styles["Normal"]))
-        #         story.append(Spacer(1, 12))
-
-        #     doc.build(story)
-        #     buffer.seek(0)
-        #     return HttpResponse(
-        #         buffer,
-        #         content_type='application/pdf',
-        #         headers={'Content-Disposition': 'attachment; filename="tom_tat.pdf"'}
-        #     )
 
         if export_format == "docx":
             buffer = BytesIO()
@@ -117,7 +118,6 @@ def extract_text_from_file(request):
         uploaded_file = request.FILES.get('file')
         if not uploaded_file:
             return JsonResponse({'error': 'Không có file nào được tải lên'}, status=400)
-        
         if 'summary_result' in request.session:
             del request.session['summary_result']
 
@@ -131,7 +131,7 @@ def extract_text_from_file(request):
                     page = pdf.pages[i]
                     text = page.extract_text()
                     if text:
-                        content += f"[Trang {i+1}]\n{text}\n\n"
+                        content += f"[{i+1}]\n{text}\n\n"
                     tables = page.extract_tables()
                     for table in tables:
                         for row in table:
