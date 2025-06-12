@@ -208,48 +208,6 @@ function showFileInfo(file) {
     }
 }
 
-async function handlePdfFile(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const numPages = pdf.numPages;
-
-    let content = '';
-    const pagesToProcess = Math.min(numPages, 20);
-
-    for (let i = 1; i <= pagesToProcess; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const textItems = textContent.items.map(item => item.str);
-        content += textItems.join(' ') + '\n\n';
-    }
-
-    if (numPages > 20) {
-        content += `\n[...Tài liệu có ${numPages} trang, chỉ hiển thị 20 trang đầu tiên...]\n`;
-    }
-
-    // Display content with better formatting
-    documentContent.innerHTML = `
-        <div class="content-text">
-            ${content.replace(/\n/g, '<br>')}
-        </div>
-    `;
-    currentFileContent = content;
-}
-
-async function handleDocFile(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    const content = result.value;
-
-    // Display content with better formatting
-    documentContent.innerHTML = `
-        <div class="content-text">
-            ${content.replace(/\n/g, '<br>')}
-        </div>
-    `;
-    currentFileContent = content;
-}
-
 async function generateSummary() {
     // Show spinner and update summary area
     spinner.style.display = 'block';

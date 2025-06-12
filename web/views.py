@@ -12,9 +12,10 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 from PyPDF2 import PdfReader
+from collections import defaultdict
 import pdfplumber
 from langdetect import detect, DetectorFactory
-DetectorFactory.seed = 0 
+DetectorFactory.seed = 0
 def summarizer_page(request):
     """
     Trang tóm tắt văn bản.
@@ -36,7 +37,6 @@ def summarize_text(request):
 
         if not content:
             return JsonResponse({'error': 'Không có nội dung để tóm tắt'}, status=400)
-        
         if not detected_language:
             try:
                 detected_language = detect(content)
@@ -129,9 +129,25 @@ def extract_text_from_file(request):
                 max_pages = min(len(pdf.pages), 20)
                 for i in range(max_pages):
                     page = pdf.pages[i]
-                    text = page.extract_text()
-                    if text:
-                        content += f"[{i+1}]\n{text}\n\n"
+                    words = page.extract_words()
+                    if words:
+                        lines = defaultdict(list)
+                        for word in words:
+                            top_rounded = round(word['top'] / 2) * 2
+                            lines[top_rounded].append((word['x0'], word['text']))
+
+                        sorted_lines = sorted(lines.items(), key=lambda x: x[0])
+
+                        all_lines = []
+                        for _, line_words in sorted_lines:
+                            sorted_words = sorted(line_words, key=lambda x: x[0])
+                            line_text = " ".join(w for _, w in sorted_words)
+                            all_lines.append(line_text.strip())
+
+                        paragraph = " ".join(all_lines)
+                        content += f"[{i+1}]\n{paragraph}\n\n"
+
+                    # Trích xuất bảng
                     tables = page.extract_tables()
                     for table in tables:
                         for row in table:
