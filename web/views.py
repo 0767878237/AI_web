@@ -1,8 +1,12 @@
-"""views.py: Chứa các hàm xử lý yêu cầu từ người dùng."""
 import os
 import json
 from io import BytesIO
 import traceback
+from collections import defaultdict
+from PIL import Image,ImageEnhance
+# import cv2
+# import numpy as np
+from langdetect import detect, DetectorFactory
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
@@ -11,11 +15,12 @@ from docx import Document
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
-from PyPDF2 import PdfReader
-from collections import defaultdict
+from PyPDF2 import PdfReader # While imported, it's not used in extract_text_from_file
 import pdfplumber
-from langdetect import detect, DetectorFactory
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 DetectorFactory.seed = 0
+
 def summarizer_page(request):
     """
     Trang tóm tắt văn bản.
@@ -58,8 +63,8 @@ def summarize_text(request):
             Yêu cầu:
             - Tóm tắt phải sử dụng đúng ngôn ngữ của văn bản gốc: {language_name}.
             - Chỉ nêu các ý chính, loại bỏ chi tiết rườm rà.
-            - Không vượt quá 5000 từ.
-
+            - Tóm tắt trong 2 trang word
+            - Tổng hợp tất cả số liệu 
             Văn bản cần tóm tắt:
             {content}
             """
@@ -126,9 +131,9 @@ def extract_text_from_file(request):
 
         if filename.endswith('.pdf'):
             with pdfplumber.open(uploaded_file) as pdf:
-                max_pages = min(len(pdf.pages), 20)
-                for i in range(max_pages):
-                    page = pdf.pages[i]
+                for i, page in enumerate(pdf.pages):
+                    page_content = ""
+                    # Cố gắng trích xuất từ ngữ
                     words = page.extract_words()
                     if words:
                         lines = defaultdict(list)
@@ -137,7 +142,6 @@ def extract_text_from_file(request):
                             lines[top_rounded].append((word['x0'], word['text']))
 
                         sorted_lines = sorted(lines.items(), key=lambda x: x[0])
-
                         all_lines = []
                         for _, line_words in sorted_lines:
                             sorted_words = sorted(line_words, key=lambda x: x[0])
@@ -145,18 +149,58 @@ def extract_text_from_file(request):
                             all_lines.append(line_text.strip())
 
                         paragraph = " ".join(all_lines)
-                        content += f"[{i+1}]\n{paragraph}\n\n"
+                        page_content += f"[{i+1}]\n{paragraph}\n\n"
+                        print(f"DEBUG: Page {i+1} - pdfplumber extracted text.") # Debugging
+                    else:
+                        # Dùng OCR nếu không có văn bản
+                        print(f"DEBUG: Page {i+1} - pdfplumber found no text, attempting OCR.") # Debugging
+                        try:
+                            pil_image = page.to_image(resolution=300).original.convert("RGB")
 
-                    # Trích xuất bảng
+                            # Thay thế OpenCV bằng PIL/Pillow
+                            try:
+                                # Chuyển sang grayscale
+                                gray_image = pil_image.convert('L')
+                                
+                                # Tăng độ tương phản để cải thiện OCR
+                                enhancer = ImageEnhance.Contrast(gray_image)
+                                enhanced_image = enhancer.enhance(1.5)
+                                
+                                # Tăng độ sắc nét
+                                sharpness_enhancer = ImageEnhance.Sharpness(enhanced_image)
+                                processed_image = sharpness_enhancer.enhance(2.0)
+                                
+                                # OCR với ảnh đã xử lý
+                                ocr_text = pytesseract.image_to_string(processed_image, lang="eng+vie")
+                                
+                            except Exception as pil_e:
+                                print(f"DEBUG: PIL processing failed: {pil_e}, using original image for OCR")
+                                # Fallback: OCR trực tiếp từ ảnh gốc
+                                ocr_text = pytesseract.image_to_string(pil_image, lang="eng+vie")
+                            
+                            if ocr_text.strip():
+                                page_content += f"[{i+1} - OCR]\n{ocr_text.strip()}\n\n"
+                                print(f"DEBUG: Page {i+1} - OCR successful, extracted {len(ocr_text.strip().split())} words.") # Debugging
+                            else:
+                                print(f"DEBUG: Page {i+1} - OCR returned empty text.") # Debugging
+                                
+                        except Exception as ocr_e:
+                            print(f"ERROR: Page {i+1} - OCR failed: {ocr_e}") # Debugging OCR errors
+                            page_content += f"[{i+1} - OCR Error] Could not extract text.\n\n"
+
+                    # Trích xuất bảng (nếu có)
                     tables = page.extract_tables()
-                    for table in tables:
-                        for row in table:
-                            row_text = "\t".join(cell if cell else "" for cell in row)
-                            content += row_text + "\n"
-                        content += "\n"
+                    if tables:
+                        print(f"DEBUG: Page {i+1} - Tables found.") # Debugging
+                        for table in tables:
+                            for row in table:
+                                row_text = "\t".join(cell if cell else "" for cell in row)
+                                page_content += row_text + "\n"
+                            page_content += "\n"
+                    else:
+                        print(f"DEBUG: Page {i+1} - No tables found.") # Debugging
 
-                if len(pdf.pages) > 20:
-                    content += f"[...Tài liệu có {len(pdf.pages)} trang, chỉ hiển thị 20 trang đầu tiên...]\n"
+                    content += page_content
 
         elif filename.endswith('.docx'):
             doc = Document(uploaded_file)
@@ -173,6 +217,10 @@ def extract_text_from_file(request):
 
         else:
             return JsonResponse({'error': 'Chỉ hỗ trợ các file PDF hoặc DOCX'}, status=400)
+
+        if not content.strip():
+            return JsonResponse({'error': 'Không thể trích xuất nội dung từ tệp. Đảm bảo tệp không trống hoặc bị lỗi hình ảnh.'}, status=400)
+
 
         return JsonResponse({'content': content})
 
