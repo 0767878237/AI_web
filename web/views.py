@@ -3,7 +3,8 @@ import json
 from io import BytesIO
 import traceback
 from collections import defaultdict
-from PIL import Image,ImageEnhance
+from PIL import Image,ImageEnhance, ImageOps
+import pandas as pd
 # import cv2
 # import numpy as np
 from langdetect import detect, DetectorFactory
@@ -12,6 +13,9 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 import google.generativeai as genai
 from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
@@ -63,7 +67,7 @@ def summarize_text(request):
             Yêu cầu:
             - Tóm tắt phải sử dụng đúng ngôn ngữ của văn bản gốc: {language_name}.
             - Chỉ nêu các ý chính, loại bỏ chi tiết rườm rà.
-            - Tóm tắt trong 2 trang word
+            - Tóm tắt tối đa trong 1 trang word
             - Tổng hợp tất cả số liệu 
             Văn bản cần tóm tắt:
             {content}
@@ -133,7 +137,8 @@ def extract_text_from_file(request):
             with pdfplumber.open(uploaded_file) as pdf:
                 for i, page in enumerate(pdf.pages):
                     page_content = ""
-                    # Cố gắng trích xuất từ ngữ
+
+                    # 1. Thử dùng pdfplumber để trích xuất văn bản
                     words = page.extract_words()
                     if words:
                         lines = defaultdict(list)
@@ -150,66 +155,41 @@ def extract_text_from_file(request):
 
                         paragraph = " ".join(all_lines)
                         page_content += f"[{i+1}]\n{paragraph}\n\n"
-                        print(f"DEBUG: Page {i+1} - pdfplumber extracted text.") # Debugging
+                        print(f"DEBUG: Page {i+1} - pdfplumber extracted text.")
                     else:
-                        # Dùng OCR nếu không có văn bản
-                        print(f"DEBUG: Page {i+1} - pdfplumber found no text, attempting OCR.") # Debugging
+                        # 2. Nếu không có text, dùng OCR
+                        print(f"DEBUG: Page {i+1} - pdfplumber found no text, attempting OCR.")
                         try:
                             pil_image = page.to_image(resolution=300).original.convert("RGB")
-
-                            # Thay thế OpenCV bằng PIL/Pillow
-                            try:
-                                # Chuyển sang grayscale
-                                gray_image = pil_image.convert('L')
-                                
-                                # Tăng độ tương phản để cải thiện OCR
-                                enhancer = ImageEnhance.Contrast(gray_image)
-                                enhanced_image = enhancer.enhance(1.5)
-                                
-                                # Tăng độ sắc nét
-                                sharpness_enhancer = ImageEnhance.Sharpness(enhanced_image)
-                                processed_image = sharpness_enhancer.enhance(2.0)
-                                
-                                # OCR với ảnh đã xử lý
-                                ocr_text = pytesseract.image_to_string(processed_image, lang="eng+vie")
-                                
-                            except Exception as pil_e:
-                                print(f"DEBUG: PIL processing failed: {pil_e}, using original image for OCR")
-                                # Fallback: OCR trực tiếp từ ảnh gốc
-                                ocr_text = pytesseract.image_to_string(pil_image, lang="eng+vie")
-                            
-                            if ocr_text.strip():
+                            ocr_text = extract_text_with_ocr_data(pil_image)
+                            if ocr_text and ocr_text.strip():
                                 page_content += f"[{i+1} - OCR]\n{ocr_text.strip()}\n\n"
-                                print(f"DEBUG: Page {i+1} - OCR successful, extracted {len(ocr_text.strip().split())} words.") # Debugging
+                                print(f"DEBUG: Page {i+1} - OCR success, extracted {len(ocr_text.strip().split())} words.")
                             else:
-                                print(f"DEBUG: Page {i+1} - OCR returned empty text.") # Debugging
-                                
+                                print(f"DEBUG: Page {i+1} - OCR returned empty text.")
                         except Exception as ocr_e:
-                            print(f"ERROR: Page {i+1} - OCR failed: {ocr_e}") # Debugging OCR errors
+                            print(f"ERROR: Page {i+1} - OCR failed: {ocr_e}")
                             page_content += f"[{i+1} - OCR Error] Could not extract text.\n\n"
 
-                    # Trích xuất bảng (nếu có)
+                    # 3. Trích xuất bảng nếu có
                     tables = page.extract_tables()
                     if tables:
-                        print(f"DEBUG: Page {i+1} - Tables found.") # Debugging
+                        print(f"DEBUG: Page {i+1} - Tables found.")
                         for table in tables:
                             for row in table:
                                 row_text = "\t".join(cell if cell else "" for cell in row)
                                 page_content += row_text + "\n"
                             page_content += "\n"
                     else:
-                        print(f"DEBUG: Page {i+1} - No tables found.") # Debugging
+                        print(f"DEBUG: Page {i+1} - No tables found.")
 
                     content += page_content
 
         elif filename.endswith('.docx'):
             doc = Document(uploaded_file)
-
-            # Trích xuất văn bản đoạn văn
             for para in doc.paragraphs:
                 content += para.text + "\n"
 
-            # Trích xuất bảng
             for table in doc.tables:
                 for row in table.rows:
                     row_data = [cell.text.strip() for cell in row.cells]
@@ -221,9 +201,66 @@ def extract_text_from_file(request):
         if not content.strip():
             return JsonResponse({'error': 'Không thể trích xuất nội dung từ tệp. Đảm bảo tệp không trống hoặc bị lỗi hình ảnh.'}, status=400)
 
-
         return JsonResponse({'content': content})
 
     except Exception as e:
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
+
+def extract_text_with_ocr_data(pil_image, lang="eng+vie"):
+    """
+    Sử dụng pytesseract để OCR ảnh, giữ cấu trúc bảng bằng cách nhóm dòng và phân tách bằng tab.
+    """
+    try:
+        processed_image = preprocess_image_for_ocr(pil_image)
+
+        custom_config = "--psm 6"  # layout OCR
+        ocr_df = pytesseract.image_to_data(
+            processed_image,
+            lang=lang,
+            output_type=pytesseract.Output.DATAFRAME,
+            config=custom_config
+        )
+
+        ocr_df = ocr_df[ocr_df.text.notnull() & (ocr_df.text.str.strip() != '')]
+        if ocr_df.empty:
+            return None
+
+        # Gom nhóm theo dòng
+        grouped = ocr_df.groupby(['block_num', 'par_num', 'line_num'])
+        lines = []
+        for _, group in grouped:
+            words = group.sort_values(by='left')
+            line = "\t".join(words['text'].str.strip())
+            lines.append(line)
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        print(f"ERROR in OCR processing: {e}")
+        return None
+
+def preprocess_image_for_ocr(pil_image):
+    """
+    Tiền xử lý ảnh: grayscale, threshold, tăng contrast và sharpness.
+    """
+    gray = pil_image.convert("L")
+    binary = gray.point(lambda x: 0 if x < 180 else 255, '1')  # Threshold
+    rgb = binary.convert("RGB")
+    contrast = ImageEnhance.Contrast(rgb).enhance(1.8)
+    sharpened = ImageEnhance.Sharpness(contrast).enhance(2.5)
+    return sharpened
+
+
+def extract_table_like_text(ocr_df):
+    """
+    Gom nhóm các dòng có tọa độ gần nhau để tạo bảng tạm.
+    """
+    lines = []
+    for _, group in ocr_df.groupby(['block_num', 'par_num', 'line_num']):
+        words = group.sort_values(by='left')
+        line = []
+        for _, row in words.iterrows():
+            line.append(row['text'].strip())
+        lines.append("\t".join(line))
+    return "\n".join(lines)
