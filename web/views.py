@@ -67,7 +67,7 @@ def summarize_text(request):
             Yêu cầu:
             - Tóm tắt phải sử dụng đúng ngôn ngữ của văn bản gốc: {language_name}.
             - Chỉ nêu các ý chính, loại bỏ chi tiết rườm rà.
-            - Tóm tắt tối đa trong 1 trang word
+            - Tóm tắt tối đa trong 1 đến 2 trang word
             - Tổng hợp tất cả số liệu 
             Văn bản cần tóm tắt:
             {content}
@@ -103,8 +103,25 @@ def export_summary(request):
         if export_format == "docx":
             buffer = BytesIO()
             doc = Document()
-            for line in summary_text.split("\n"):
-                doc.add_paragraph(line)
+
+            style = doc.styles['Normal']
+            font = style.font
+            font.name = 'Times New Roman'
+            font.size = Pt(12)
+
+            # Đặt font đúng với ngôn ngữ tiếng Việt (phải đặt cả name và element)
+            style.element.rPr.rFonts.set(qn('w:eastAsia'), 'Times New Roman')
+
+            for line in summary_text.strip().split("\n"):
+                if line.strip():
+                    para = doc.add_paragraph(line.strip())
+
+                    # Cài đặt spacing cho từng đoạn
+                    para_format = para.paragraph_format
+                    para_format.space_before = Pt(0)
+                    para_format.space_after = Pt(6)
+                    para_format.line_spacing = 1.15
+
             doc.save(buffer)
             buffer.seek(0)
             return HttpResponse(
